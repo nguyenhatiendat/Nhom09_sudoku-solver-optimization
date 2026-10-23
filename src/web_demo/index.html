@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUDOKU SOLVER OPTIMIZATION</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="welcome-screen">
+        <div class="welcome-box glass-effect">
+            <h1>SUDOKU SOLVER OPTIMIZATION</h1>
+            <h2>Đồ án Nhập môn Tối ưu hóa</h2>
+            <p>Đánh giá hiệu năng: Baseline vs MRV Scan vs CSP (Bitmask)</p>
+            <button id="btn-start" class="btn-primary">BẮT ĐẦU</button>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <header class="app-header">
+            <button id="btn-toggle-history" class="btn-secondary">☰ Lịch Sử</button>
+            <div class="app-title">SUDOKU OPTIMIZATION</div>
+            <button id="btn-toggle-tools" class="btn-secondary">☰ Công Cụ</button>
+        </header>
+
+        <div id="main-layout">
+            <aside id="left-sidebar" class="hidden">
+                <div id="resizer"></div>
+                <h3>Lịch Sử & Nhật Ký</h3>
+                <div id="ai-log-container" style="margin-bottom: 15px;">
+                    <h4 style="color: #60a5fa; margin-bottom: 8px; font-size: 13px;">Nhật Ký Thuật Toán</h4>
+                    <div id="ai-log-box"></div>
+                </div>
+                <div id="history-list"></div>
+                
+                <div style="display: flex; gap: 10px; margin-top: auto;">
+                    <button id="btn-export-csv" class="btn-success" style="flex: 1; padding: 10px; border-radius: 8px; cursor: pointer;">
+                        <i class="fa-solid fa-file-csv"></i> Xuất CSV
+                    </button>
+                    <button id="btn-clear-history" class="btn-danger" style="flex: 1; padding: 10px; border-radius: 8px; cursor: pointer;">
+                        <i class="fa-solid fa-trash"></i> Xóa
+                    </button>
+                </div>
+            </aside>
+
+            <main id="center-content">
+                <div class="mode-toggle glass-effect">
+                    <label><input type="checkbox" id="toggle-dual-board"> Chế độ So Sánh (2 Bàn Cờ)</label>
+                </div>
+
+                <div class="boards-container" id="board-container">
+                    <div class="board-wrapper" id="wrapper-main">
+                        <h3 class="board-title play-color">BÀN CHƠI (BASELINE)</h3>
+                        <div class="sudoku-container glass-effect">
+                            <table id="sudoku-board-main" class="sudoku-board"></table>
+                        </div>
+                    </div>
+
+                    <div class="board-wrapper" id="wrapper-compare" style="display: none;">
+                        <h3 class="board-title csp-color">THUẬT TOÁN TỐI ƯU (CSP)</h3>
+                        <div class="sudoku-container glass-effect">
+                            <table id="sudoku-board-compare" class="sudoku-board"></table>
+                        </div>
+                        <div class="board-stats glass-effect">
+                            <p>Nodes: <span id="stat-nodes-csp" class="val">0</span></p>
+                            <p>Time: <span id="stat-time-csp" class="val">0</span> ms</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container glass-effect" id="chart-wrapper" style="display: none;">
+                    <canvas id="convergenceChart"></canvas>
+                </div>
+
+                <div class="bottom-bar">
+                    <div class="control-buttons">
+                        <div class="dropdown">
+                            <button class="btn-primary dropbtn">GIẢI AI <i class="fa-solid fa-caret-down"></i></button>
+                            <div class="dropdown-content">
+                                <a href="#" id="btn-solve-slow">Giải Kỹ (Xem từng bước)</a>
+                                <a href="#" id="btn-solve-fast">Giải Nhanh (Đo thời gian)</a>
+                            </div>
+                        </div>
+                        <button id="btn-hint" class="btn-success" title="Gợi ý 1 ô đúng">GỢI Ý (<span id="hint-count">3</span>)</button>
+                    </div>
+                    
+                    <div class="toolbar-controls glass-effect">
+                        <div class="select-wrapper">
+                            <label>Độ khó:</label>
+                            <select id="difficulty-select">
+                                <option value="1">Tự Nhập</option>
+                                <option value="2">Dễ (45 ô)</option>
+                                <option value="3" selected>Trung bình (35 ô)</option>
+                                <option value="4">Khó (28 ô)</option>
+                                <option value="5">Siêu Khó (21 ô)</option>
+                            </select>
+                        </div>
+                        <button id="btn-new-game" class="btn-toolbar btn-green"><i class="fa-solid fa-rotate-right"></i> GAME MỚI</button>
+                        
+                        <div class="select-wrapper">
+                            <label>Số lần:</label>
+                            <input type="number" id="benchmark-runs" value="12" min="1" style="width: 60px; padding: 8px; background: #1e293b; color: white; border-radius: 6px; border: 1px solid #555; font-weight: bold;">
+                        </div>
+                        <button id="btn-benchmark" class="btn-toolbar btn-red"><i class="fa-solid fa-chart-line"></i> BENCHMARK</button>
+                    </div>
+                    
+                    <div id="ai-stats-bar" class="glass-effect">
+                        <p>⏱ TB: <span id="stat-time">0.000</span> s</p>
+                        <p>📉 Nodes: <span id="stat-backtracks">0</span></p>
+                    </div>
+                </div>
+            </main>
+
+            <aside id="right-sidebar" class="hidden">
+                <h3><i class="fa-solid fa-screwdriver-wrench"></i> Công cụ</h3>
+                <div class="game-info-sidebar">
+                    <div class="info-box glass-effect"><i class="fa-regular fa-clock"></i> <span id="timer-display">00:00</span></div>
+                    <div class="info-box glass-effect"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi:<span id="mistakes-display">0</span>/5</div>
+                </div>
+                <div class="tools-row">
+                    <button id="btn-undo" class="btn-secondary">↩ Hoàn tác</button>
+                    <button id="btn-erase" class="btn-secondary">Xoá</button>
+                    <button id="btn-pencil" class="btn-secondary pencil-off">✎ Ghi chú: <span id="pencil-status">Tắt</span></button>
+                </div>
+                <div class="numpad">
+                    <button class="num-btn">1</button><button class="num-btn">2</button><button class="num-btn">3</button>
+                    <button class="num-btn">4</button><button class="num-btn">5</button><button class="num-btn">6</button>
+                    <button class="num-btn">7</button><button class="num-btn">8</button><button class="num-btn">9</button>
+                </div>
+                <div class="sidebar-bottom-actions">
+                    <select id="bg-selector">
+                        <option value="images/bg.jpg">Nền Mặc Định</option>
+                        <option value="images/bien.jpeg">Nền Biển Xanh</option>
+                        <option value="images/nuituyet.jpeg">Nền Núi Tuyết</option>
+                        <option value="images/Rungsuong.jpeg">Nền Rừng Sương</option>
+                    </select>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div id="board-modal" class="hidden">
+        <div class="modal-content glass-effect">
+            <span id="close-modal">&times;</span>
+            <h2 id="modal-title">Chi tiết bản ghi</h2>
+            <div class="modal-info" id="modal-info"></div>
+            <div id="modal-board-container" style="max-height: 250px; overflow-y: auto;"></div>
+            <button id="btn-delete-single" class="btn-danger" style="margin-top: 15px; padding: 10px; border-radius: 8px; width: 100%; cursor: pointer;">
+                <i class="fa-solid fa-trash"></i> Xóa bản ghi này
+            </button>
+        </div>
+    </div>
+
+    <script src="logic.js"></script>
+    <script src="ui.js"></script>
+</body>
+</html>
